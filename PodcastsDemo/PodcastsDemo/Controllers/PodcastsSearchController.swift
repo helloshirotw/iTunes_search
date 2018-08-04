@@ -15,16 +15,33 @@ class PodcastsSearchController: UITableViewController {
     
     let cellId = "cellId"
     
+    var timer: Timer?
+    
     let searchController = UISearchController(searchResultsController: nil)
+    
+    var podcastSearchView = Bundle.main.loadNibNamed("PodcastsSearchingView", owner: self, options: nil)?.first as? UIView
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setupSearchBar()
         setupTableView()
+        
+        // Default Search  terms
+        searchBar(searchController.searchBar, textDidChange: "Voong")
     }
     
     //MARK:- UITableView
+    
+    override func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+    
+        return podcasts.isEmpty && searchController.searchBar.text?.isEmpty == false ? 200 : 0
+    }
+    
+    
+    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return podcastSearchView
+    }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let episodesController = EpisodesController()
@@ -41,7 +58,7 @@ class PodcastsSearchController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return self.podcasts.count > 0 ? 0 : 250
+        return podcasts.isEmpty && searchController.searchBar.text?.isEmpty == true ? 250 : 0
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -85,10 +102,17 @@ extension PodcastsSearchController: UISearchBarDelegate {
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
 
-        APIService.shared.fetchPodcasts(searchText: searchText) { (podcasts) in
-            self.podcasts = podcasts
-            self.tableView.reloadData()
-        }
+        podcasts = []
+        tableView.reloadData()
+        
+        //0.5 sec delay searching
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false, block: { (timer) in
+            APIService.shared.fetchPodcasts(searchText: searchText) { (podcasts) in
+                self.podcasts = podcasts
+                self.tableView.reloadData()
+            }
+        })
     }
 }
 
